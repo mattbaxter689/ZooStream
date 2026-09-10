@@ -1,0 +1,18 @@
+workspace:
+  subscription_id: ${AZURE_SUBSCRIPTION_ID}
+  resource_group: ${AZURE_RESOURCE_GROUP}
+  workspace_name: ${AZURE_WORKSPACE_NAME}
+
+environment:
+  name: log_generate
+  version: latest
+
+compute:
+  compute_cluster: training-gpu
+
+pipeline:
+  experiment_name: llm-tuning
+
+# data:
+#   name: azureml:sleep_data:1
+#   output_asset_name: modelling_assets 
