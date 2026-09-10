@@ -1,0 +1,6 @@
+$schema: https://azuremlschemas.azureedge.net/latest/data.schema.json
+name: hf_qwen_model
+version: "1"
+type: uri_folder
+description: "Qwen 2.5 Coder 1.5B Instruct Model Weights"
+path: ./../../qwen-2.5-coder-1.5b-instruct
