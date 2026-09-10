@@ -13,6 +13,9 @@ compute:
 pipeline:
   experiment_name: llm-tuning
 
-# data:
-#   name: azureml:sleep_data:1
-#   output_asset_name: modelling_assets 
+data:
+  name: azureml:zoo_asset:1
+  output_asset_name: zookeeper_transformed
+
+hfmodel:
+  name: azureml:hf_qwen_model:1
