@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from azure.ai.ml import MLClient, dsl
+from azure.ai.ml import MLClient, dsl, command, Input, Output
 from azure.ai.ml.entities import Command
 from azure.identity import DefaultAzureCredential
 from rich.console import Console
@@ -45,28 +45,28 @@ def _base_job_kwargs(name: str, description: str) -> dict:
 
 # ------ Job Builders ---------
 # This is scaffolding from a previous project that is being resued
-def data_versioning_component() -> Command:
+def data_prep_component() -> Command:
     pass
-    # return command(
-    #     **_base_job_kwargs(
-    #         "data-versioning-gate", "Fetch, clean, split, and version data"
-    #     ),
-    #     command=(
-    #         "python -m gates.data_versioning_gate "
-    #         "--raw-data ${{inputs.raw_data}} "
-    #         "--output-training-path ${{outputs.processed_data}}"
-    #     ),
-    #     inputs={
-    #         "raw_data": Input(type="uri_file", path=CONFIG.data.name),
-    #     },
-    #     outputs={
-    #         "processed_data": Output(
-    #             type="uri_folder",
-    #             mode="rw_mount",
-    #             name=CONFIG.data.output_asset_name,
-    #         )
-    #     },
-    # )
+    return command(
+        **_base_job_kwargs(
+            "data-prep-gate", "Fetch, clean, and prepare data for training"
+        ),
+        command=(
+            "python -m gates.data_prep_gate "
+            "--raw-data ${{inputs.raw_data}} "
+            "--output_path ${{outputs.processed_data}}"
+        ),
+        inputs={
+            "raw_data": Input(type="uri_file", path=CONFIG.data.name),
+        },
+        outputs={
+            "processed_data": Output(
+                type="uri_folder",
+                mode="rw_mount",
+                name=CONFIG.data.output_asset_name,
+            )
+        },
+    )
 
 
 @dsl.pipeline(
@@ -74,8 +74,10 @@ def data_versioning_component() -> Command:
     experiment_name=CONFIG.pipeline.experiment_name,
     default_compute=CONFIG.compute.compute_cluster,
 )
-def build_pipeline():
-    pass
+def build_pipeline(raw_data: Input):
+    prep_step = data_prep_component()(raw_data=raw_data)
+
+    return prep_step.outputs
 
 
 def main() -> None:
