@@ -980,7 +980,7 @@ wheels = [
 [[package]]
 name = "log-stream"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "azure-ai-ml" },
     { name = "azure-identity" },
