@@ -14,7 +14,7 @@ pipeline:
   experiment_name: llm-tuning
 
 data:
-  name: azureml:zoo_asset:1
+  name: azureml:zookeeper_data:1
   output_asset_name: zookeeper_transformed
 
 hfmodel:
