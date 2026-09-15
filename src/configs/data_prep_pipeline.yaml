@@ -1,3 +1,4 @@
+output_name: "sft_transformed.jsonl"
 window_size: 6
 stride: 3
 max_samples: 1500
@@ -8,4 +9,4 @@ anomaly_keywords:
   - "ConnectionLoss"
   - "SESSION EXPIRED"
   - "FAILED"
-log_regex: '^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3})\s+-\s+(\w+)\s+\[([^\]]+)\]\s+-\s+(.*)$'
+log_regex: '^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3})\s+-\s+(\w+)\s+\[(.*)\]\s+-\s+(.*)$'
