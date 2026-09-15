@@ -1,13 +1,15 @@
 import logging
 from pathlib import Path
+import sys
 
 from azure.ai.ml import MLClient, dsl, command, Input, Output
-from azure.ai.ml.entities import Command
+from azure.ai.ml.entities import Command, PipelineJobSettings
 from azure.identity import DefaultAzureCredential
 from rich.console import Console
+from rich.panel import Panel
 
-from src.orchestrator_config.loader import load_orchestrator_config
-from src.orchestrator_config.orchestrator_config import OrchestratorConfig
+from src.orchestrator.loader import load_orchestrator_config
+from src.orchestrator.config import OrchestratorConfig
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
 log = logging.getLogger("orchestrator")
@@ -46,7 +48,6 @@ def _base_job_kwargs(name: str, description: str) -> dict:
 # ------ Job Builders ---------
 # This is scaffolding from a previous project that is being resued
 def data_prep_component() -> Command:
-    pass
     return command(
         **_base_job_kwargs(
             "data-prep-gate", "Fetch, clean, and prepare data for training"
@@ -54,7 +55,7 @@ def data_prep_component() -> Command:
         command=(
             "python -m gates.data_prep_gate "
             "--raw-data ${{inputs.raw_data}} "
-            "--output_path ${{outputs.processed_data}}"
+            "--output-path ${{outputs.processed_data}}"
         ),
         inputs={
             "raw_data": Input(type="uri_file", path=CONFIG.data.name),
@@ -81,35 +82,32 @@ def build_pipeline(raw_data: Input):
 
 
 def main() -> None:
-    pass
-    # ml_client = get_client()
-    #
-    # pipeline_job = build_pipeline(
-    #     raw_data=Input(type="uri_file", path=CONFIG.data.name),
-    #     gold_data=Input(type="uri_file", path=CONFIG.data.name),
-    # )
-    # pipeline_job.settings = PipelineJobSettings(
-    #     force_rerun=True, default_compute=CONFIG.compute.compute_cluster
-    # )
+    ml_client = get_client()
 
-    # try:
-    #     returned_job = ml_client.jobs.create_or_update(pipeline_job)
-    #     job_url = returned_job.studio_url
-    #     console.print("\n[bold cyan]▶ Pipeline submitted[/bold cyan]")
-    #     console.print(f"  Job ID : {returned_job.name}")
-    #     console.print(f"  Studio : [link={job_url}]{job_url}[/link]")
-    #
-    #     # Stream logs — blocks until pipeline completes
-    #     ml_client.jobs.stream(returned_job.name)
-    #
-    #     console.print(Panel("[bold green]Pipeline complete[/bold green]"))
-    #
-    # except RuntimeError as exc:
-    #     console.print(
-    #         Panel(f"[bold red]Pipeline halted:\n{exc}[/bold red]", title="FAILED")
-    #     )
-    #     sys.exit(1)
-    #
+    pipeline_job = build_pipeline(
+        raw_data=Input(type="uri_file", path=CONFIG.data.name),
+    )
+    pipeline_job.settings = PipelineJobSettings(
+        force_rerun=True, default_compute=CONFIG.compute.compute_cluster
+    )
+
+    try:
+        returned_job = ml_client.jobs.create_or_update(pipeline_job)
+        job_url = returned_job.studio_url
+        console.print("\n[bold cyan]▶ Pipeline submitted[/bold cyan]")
+        console.print(f"  Job ID : {returned_job.name}")
+        console.print(f"  Studio : [link={job_url}]{job_url}[/link]")
+
+        # Stream logs — blocks until pipeline completes
+        ml_client.jobs.stream(returned_job.name)
+
+        console.print(Panel("[bold green]Pipeline complete[/bold green]"))
+
+    except RuntimeError as exc:
+        console.print(
+            Panel(f"[bold red]Pipeline halted:\n{exc}[/bold red]", title="FAILED")
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":

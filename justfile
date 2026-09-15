@@ -1,4 +1,4 @@
-set doten-load := true
+set dotenv-load := true
 
 # Submit DSL pipeline to Azure ML for training. For local submission only
 run:
