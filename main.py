@@ -6,8 +6,8 @@ from azure.ai.ml.entities import Command
 from azure.identity import DefaultAzureCredential
 from rich.console import Console
 
-from src.config.loader import load_orchestrator_config
-from src.config.orchestrator_config import OrchestratorConfig
+from src.orchestrator_config.loader import load_orchestrator_config
+from src.orchestrator_config.orchestrator_config import OrchestratorConfig
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
 log = logging.getLogger("orchestrator")
