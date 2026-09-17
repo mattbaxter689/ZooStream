@@ -70,15 +70,34 @@ def data_prep_component() -> Command:
     )
 
 
+def model_fit_component() -> Command:
+    return command(
+        **_base_job_kwargs("model-fit-gate", "Train model using transformed data"),
+        command=(
+            "python -m gates.model_fit_gate "
+            "--model-dir ${{inputs.model_location}} "
+            "--train-data ${{inputs.train_data}}"
+        ),
+        inputs={
+            "model_location": Input(type="uri_folder", path=CONFIG.hfmodel.name),
+            "train_data": Input(type="uri_folder", mode="rw_mount"),
+        },
+    )
+
+
 @dsl.pipeline(
     description="Gated classification pipeline",
     experiment_name=CONFIG.pipeline.experiment_name,
     default_compute=CONFIG.compute.compute_cluster,
 )
-def build_pipeline(raw_data: Input):
+def build_pipeline(raw_data: Input, model_dir: Input):
     prep_step = data_prep_component()(raw_data=raw_data)
 
-    return prep_step.outputs
+    fit_step = model_fit_component()(
+        model_location=model_dir, train_dataa=prep_step.outputs.processed_data
+    )
+
+    return prep_step.outputs, fit_step.outputs
 
 
 def main() -> None:
