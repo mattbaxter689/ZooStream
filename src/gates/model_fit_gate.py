@@ -1,6 +1,8 @@
 import argparse
 from pathlib import Path
 
+from utils.logging_utils import setup_logging
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Model fit gate to train LLM model")
@@ -27,7 +29,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace):
-    pass
+
+    setup_logging()
 
 
 if __name__ == "__main__":
