@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
@@ -14,6 +15,12 @@ def parse_args() -> argparse.Namespace:
         type=str,
         required=True,
         help="Location of transformed log data for model fit",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/model_fit_pipeline.yaml"),
+        help="Path to yaml config for data prep pipeline",
     )
 
     return parser.parse_args()
