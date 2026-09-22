@@ -82,18 +82,8 @@ Training and pipeline orchestration run on **Azure Machine Learning**, with hype
 - **`src/config/training_config.yaml`** — Optuna search space (trial count, epochs, hyperparameter ranges) for the fine-tuning run. Validated against `src/config/training_config.py`.
 ## Project Status
  
-This repo is under active early development. Currently in place:
+This repo is under active early development. Not yet implemented (stubbed in `main.py`):
  
-- ✅ Config loading/validation (Pydantic models + env-var substitution)
-- ✅ Azure ML data asset and environment definitions
-- ✅ Docker training environment
-- ✅ Optuna hyperparameter search space definition
-Not yet implemented (stubbed in `main.py`):
- 
-- ⬜ Data versioning/preprocessing pipeline step
 - ⬜ Fine-tuning/training pipeline step
 - ⬜ Full DSL pipeline wiring and submission
 - ⬜ The API for streaming generated example logs
-## License
- 
-No license has been specified yet for this repository.
