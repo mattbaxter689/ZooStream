@@ -83,7 +83,11 @@ Training and pipeline orchestration run on **Azure Machine Learning**, with hype
 ## Project Status
  
 This repo is under active early development. Not yet implemented (stubbed in `main.py`):
- 
-- ⬜ Fine-tuning/training pipeline step
-- ⬜ Full DSL pipeline wiring and submission
-- ⬜ The API for streaming generated example logs
+
+Currently in works: 
+- [ ] Custom callback to log model to mlflow in Azure
+
+To be implemented:
+- [ ] Fine-tuning/training pipeline step
+- [ ] Full DSL pipeline wiring and submission
+- [ ] The API for streaming generated example logs
