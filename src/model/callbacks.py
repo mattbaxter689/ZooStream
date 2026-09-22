@@ -1,5 +1,4 @@
 import logging
-import shutil
 from pathlib import Path
 import json
 from typing import Any
@@ -14,17 +13,6 @@ from transformers import (
 logger = logging.getLogger(__name__)
 
 
-class ArtifactSaveCallback(TrainerCallback):
-    """
-    Saves custom metadata to every checkpoint folder to ensure that the
-    metadata I want is part of the associated data
-    """
-
-    def __init__(self, artifact_filename: str) -> None:
-        super().__init__()
-        self.artifact_filename = artifact_filename
-
-
 class ModelCardCallback(TrainerCallback):
     """
     Generate the model card and bundle with model artifacts at end of
@@ -36,27 +24,6 @@ class ModelCardCallback(TrainerCallback):
         self.artifact_filename = artifact_filename
         self.loaded_artifacts: dict[str, Any] | None = None
 
-    def on_save(
-        self,
-        args: TrainingArguments,
-        state: TrainerState,
-        control: TrainerControl,
-        **kwargs: Any,
-    ) -> None:
-        checkpoint_dir = Path(args.output_dir) / f"checkpoint-{state.global_step}"
-        checkpoint_dir.mkdir(parents=True, exist_ok=True)
-
-        metadata: dict[str, Any] = {
-            "checkpoint_step": state.global_step,
-            "best_metric_so_far": state.best_metric,
-            "status": "Valid Checkpoint",
-        }
-
-        filepath = checkpoint_dir / self.artifact_filename
-        with open(filepath, "w") as f:
-            json.dump(metadata, f, indent=4)
-        logger.info(f"Callback saved artifact to {filepath}")
-
     def on_train_end(
         self,
         args: TrainingArguments,
@@ -65,20 +32,12 @@ class ModelCardCallback(TrainerCallback):
         **kwargs: Any,
     ) -> None:
 
-        best_checkpoint = state.best_model_checkpoint or args.output_dir
-        trainer: Trainer | None = kwargs.get("trainer")
-
-        if not best_checkpoint or not Path(best_checkpoint).exists():
-            logger.warning(f"Best checkpoint not found: {best_checkpoint}")
+        if not args.should_save:
             return
 
-        logger.info(f"Best checkpoint verified: {best_checkpoint}")
-        artifact_filepath = Path(best_checkpoint) / self.artifact_filename
-        if artifact_filepath.exists():
-            with open(artifact_filepath, "r") as f:
-                self.loaded_artifacts = json.load(f)
-
+        trainer: Trainer | None = kwargs.get("trainer")
         if trainer is None:
+            logger.warning("Trainer instance not passed to callback kwargs")
             return
 
         trainer.create_model_card(
@@ -88,8 +47,29 @@ class ModelCardCallback(TrainerCallback):
             model_name="Qwen-Zookeeper-Producer",
             dataset="custom-jsonl",
         )
-        source_readme = Path(args.output_dir) / "README.md"
-        destination_readme = Path(best_checkpoint) / "README.md"
-        if source_readme.exists() and source_readme != destination_readme:
-            shutil.copy(source_readme, destination_readme)
-            logger.info(f"Model card bundled to: {destination_readme}")
+
+        metadata = {
+            "model_name": "Qwen-Zookeeper-Producer",
+            "best_checkpoint_step": state.best_model_checkpoint,
+            "best_metric": {
+                "metric_name": args.metric_for_best_model,
+                "value": state.best_metric,
+            },
+            "training_stats": {
+                "epoch": state.epoch,
+                "global_step": state.global_step,
+                "total_flos": state.total_flos,
+                "log_history": state.log_history[-5:],  # Last few logs
+            },
+            "hyperparameters": {
+                "learning_rate": args.learning_rate,
+                "batch_size": args.per_device_train_batch_size
+                * args.gradient_accumulation_steps,
+                "max_seq_length": getattr(args, "max_seq_length", None),
+            },
+        }
+        meta_path = Path(args.output_dir) / self.artifact_filename
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=4)
+
+        logger.info(f"Updated best checkpoint metadata at: {meta_path}")
