@@ -2,6 +2,7 @@ from trl import SFTTrainer, SFTConfig
 import os
 from pathlib import Path
 import logging
+from transformers import EarlyStoppingCallback
 
 from model.config.loader import load_config
 from model.data import load_and_prepare_dataset
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def train(
-    config_path: str | Path, dataset_path: str | Path, model_path: str
+    config_path: str | Path,
+    dataset_path: str | Path,
+    model_path: str,
 ) -> str | Path:
 
     # load training configs
@@ -61,13 +64,19 @@ def train(
         args=training_args,
         train_dataset=split_dataset["train"],
         eval_dataset=split_dataset["test"],
-        callbacks=[ModelCardCallback(cfg.paths.artifact_name)],
+        callbacks=[
+            ModelCardCallback(cfg.paths.artifact_name),
+            EarlyStoppingCallback(early_stopping_patience=3),
+        ],
     )
 
     logger.info("Starting training from YAML config")
     trainer.train()
 
-    best_checkpoint = trainer.state.best_model_checkpoint or cfg.paths.output_dir
-    tokenizer.save_pretrained(best_checkpoint)
+    # Save best model weights, config, and tokenizer to output output_dir
+    trainer.save_model(cfg.paths.output_dir)
+    tokenizer.save_pretrained(cfg.paths.output_dir)
 
-    return best_checkpoint
+    logger.info(f"Exported best model asset to {cfg.paths.output_dir}")
+
+    return Path(cfg.paths.output_dir)
