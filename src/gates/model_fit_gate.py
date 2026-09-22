@@ -1,7 +1,11 @@
 import argparse
 from pathlib import Path
+import logging
 
 from utils.logging_utils import setup_logging
+from model.train import train
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,6 +35,9 @@ def parse_args() -> argparse.Namespace:
 def run(args: argparse.Namespace):
 
     setup_logging()
+
+    best_checkpoint = train(args.config, args.train_data, args.model_dir)
+    logger.info(f"{best_checkpoint}")
 
 
 if __name__ == "__main__":
