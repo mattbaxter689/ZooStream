@@ -13,7 +13,6 @@ WORKSPACE_NAME="${AZURE_WORKSPACE_NAME:-my-workspace}"
 
 DATA_YAML_1="${DATA_YAML_1:-./infra/zoo_data.yaml}"
 DATA_YAML_2="${DATA_YAML_2:-./infra/qwen_asset.yaml}"
-ENV_PYTHON_SCRIPT="${ENV_PYTHON_SCRIPT:-./infra/create_environment.py}"
 
 echo "=========================================="
 echo "Target Workspace: ${WORKSPACE_NAME}"
@@ -34,6 +33,5 @@ az ml data create -f "$DATA_YAML_2" \
 
 # 5. Create Environment via Python using uv
 echo -e "\n[3/3] Creating Environment Asset via Python using uv..."
-uv run "$ENV_PYTHON_SCRIPT"
-
+just environment
 echo -e "\n✓ All registrations completed successfully!"
