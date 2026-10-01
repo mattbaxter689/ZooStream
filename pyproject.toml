@@ -9,6 +9,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = "==3.11.*"
 dependencies = [
+    "torch==2.4.1+cu124",
     "azure-ai-ml>=1.31.0",
     "azure-identity>=1.25.1",
     "azureml-mlflow==1.54.0",
@@ -28,6 +29,7 @@ dependencies = [
     "pydantic>=2.13.4",
     "ruff>=0.16.2",
     "setuptools<82.0.0",
+    "bitsandbytes>=0.50.2",
 ]
 
 [[tool.uv.index]]
