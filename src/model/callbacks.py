@@ -14,6 +14,60 @@ import mlflow.transformers
 
 logger = logging.getLogger(__name__)
 
+CURATED_PARAMS = [
+    "num_train_epochs",
+    "learning_rate",
+    "weight_decay",
+    "per_device_train_batch_size",
+    "gradient_accumulation_steps",
+    "lr_scheduler_type",
+    "warmup_ratio",
+    "seed",
+]
+
+
+class CuratedMlflowCallback(TrainerCallback):
+    """
+    Custom MLflow logger to avoind the 500-character parameter truncation errors
+    """
+
+    def __init__(self, extra_params: dict | None = None) -> None:
+        super().__init__()
+        self.extra_params = extra_params or {}
+
+    def on_train_begin(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs: Any,
+    ) -> None:
+        if not state.is_world_process_zero:
+            return
+
+        args_dict = args.to_dict()
+        params = {k: args_dict[k] for k in CURATED_PARAMS if k in args_dict}
+        params.update(self.extra_params)
+
+        # Truncate string representations safely
+        safe_params = {k: str(v)[:500] for k, v in params.items()}
+        mlflow.log_params(safe_params)
+
+        # Dump full un-truncated config as artifact
+        mlflow.log_dict(args_dict, "config/training_args.json")
+
+    def on_log(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        logs: dict | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if logs and state.is_world_process_zero:
+            metrics = {k: v for k, v in logs.items() if isinstance(v, (int, float))}
+            mlflow.log_metrics(metrics, step=state.global_step)
+
 
 class ModelCardCallback(TrainerCallback):
     """
@@ -54,7 +108,34 @@ class ModelCardCallback(TrainerCallback):
             dataset="custom-jsonl",
         )
 
-        metadata = {
+        metadata = self.create_final_metadata(args, state)
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=4)
+
+        mlflow.log_artifacts(args.output_dir, artifact_path="adapter_model")
+
+        # mlflow.transformers.log_model(
+        #     transformers_model={
+        #         "model": trainer.model,
+        #         "tokenizer": trainer.processing_class,
+        #     },
+        #     model_config=quant_config,
+        #     artifact_path="best_model",
+        #     artifacts=extra_artifacts,
+        #     task="text-generation",
+        # )
+
+        logger.info(f"Updated best checkpoint metadata at: {meta_path}")
+
+    def create_final_metadata(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+    ) -> dict[str, int | str]:
+        """
+        Helper to create the custom model metadata artifact
+        """
+        return {
             "model_name": "Qwen-Zookeeper-Producer",
             "best_checkpoint_step": state.best_model_checkpoint,
             "best_metric": {
@@ -69,28 +150,8 @@ class ModelCardCallback(TrainerCallback):
             },
             "hyperparameters": {
                 "learning_rate": args.learning_rate,
-                "batch_size": args.per_device_train_batch_size
-                * args.gradient_accumulation_steps,
+                "batch_size": args.per_device_train_batch_size,
+                "gradient_accumulation_steps": args.gradient_accumulation_steps,
                 "max_seq_length": getattr(args, "max_seq_length", None),
             },
         }
-
-        with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=4)
-
-        extra_artifacts = {
-            "model_card": str(readme_path),
-            "metadata": str(meta_path),
-        }
-
-        mlflow.transformers.log_model(
-            transformers_model={
-                "model": trainer.model,
-                "tokenizer": trainer.processing_class,
-            },
-            artifact_path="best_model",
-            artifacts=extra_artifacts,
-            task="text-generation",
-        )
-
-        logger.info(f"Updated best checkpoint metadata at: {meta_path}")
