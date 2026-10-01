@@ -94,10 +94,10 @@ def build_pipeline(raw_data: Input, model_dir: Input):
     prep_step = data_prep_component()(raw_data=raw_data)
 
     fit_step = model_fit_component()(
-        model_location=model_dir, train_dataa=prep_step.outputs.processed_data
+        model_location=model_dir, train_data=prep_step.outputs.processed_data
     )
 
-    return prep_step.outputs, fit_step.outputs
+    return fit_step.outputs
 
 
 def main() -> None:
@@ -105,6 +105,7 @@ def main() -> None:
 
     pipeline_job = build_pipeline(
         raw_data=Input(type="uri_file", path=CONFIG.data.name),
+        model_dir=Input(type="uri_file", path=CONFIG.hfmodel.name),
     )
     pipeline_job.settings = PipelineJobSettings(
         force_rerun=True, default_compute=CONFIG.compute.compute_cluster
