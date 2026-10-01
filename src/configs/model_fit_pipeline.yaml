@@ -3,6 +3,7 @@ paths:
   artifact_name: "custom_metadata.json"
 
 training:
+  #TODO: adjust parameter. Left alone for quick testing
   max_seq_length: 256
   epochs: 2
   learning_rate: 0.0002

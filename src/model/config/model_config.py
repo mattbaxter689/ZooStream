@@ -8,10 +8,10 @@ class PathsConfig(BaseModel):
 
 
 class TrainConfig(BaseModel):
-    max_seq_length: PositiveInt = 256
+    max_seq_length: PositiveInt = 1024
     epochs: PositiveInt = 10
     learning_rate: float = 2e-4
-    batch_size: PositiveInt = 4
+    batch_size: PositiveInt = 8
     gradient_accumulation_steps: PositiveInt = 4
     weight_decay: float = 0.01
 
