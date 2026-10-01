@@ -6,7 +6,6 @@ COPY --from=ghcr.io/astral-sh/uv:0.7.12 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never \
-    # This is the key: installs into system Python, not a .venv
     UV_PROJECT_ENVIRONMENT=/usr/local
 
 WORKDIR /app
