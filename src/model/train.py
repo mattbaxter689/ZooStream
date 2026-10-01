@@ -26,7 +26,8 @@ def train(
         os.environ["MLFLOW_RUN_ID"] = step_run_id
 
     # load dataset
-    split_dataset = load_and_prepare_dataset(dataset_path)
+    dataset = f"{dataset_path.rstrip('/')}/sft_transformed.jsonl"
+    split_dataset = load_and_prepare_dataset(dataset)
 
     model, tokenizer = setup_model_and_tokenizer(
         model_path=model_path,
@@ -54,28 +55,37 @@ def train(
         metric_for_best_model="eval_loss",
         greater_is_better=False,
         report_to="mlflow",
-        dataset_text_field="text",
         max_seq_length=cfg.training.max_seq_length,
     )
+
+    modelcard_callback = ModelCardCallback(cfg.paths.artifact_name)
+
+    def formatting_func(example):
+        texts = []
+        for instr, out in zip(example["instruction"], example["output"]):
+            messages = [
+                {"role": "user", "content": instr},
+                {"role": "assistant", "content": out},
+            ]
+            texts.append(tokenizer.apply_chat_template(messages, tokenize=False))
+        return texts
 
     trainer = SFTTrainer(
         model=model,
         processing_class=tokenizer,
+        formatting_func=formatting_func,
         args=training_args,
         train_dataset=split_dataset["train"],
         eval_dataset=split_dataset["test"],
         callbacks=[
-            ModelCardCallback(cfg.paths.artifact_name),
+            modelcard_callback,
             EarlyStoppingCallback(early_stopping_patience=3),
         ],
     )
+    modelcard_callback.trainer = trainer
 
     logger.info("Starting training from YAML config")
     trainer.train()
-
-    # Save best model weights, config, and tokenizer to output output_dir
-    trainer.save_model(cfg.paths.output_dir)
-    tokenizer.save_pretrained(cfg.paths.output_dir)
 
     logger.info(f"Exported best model asset to {cfg.paths.output_dir}")
 

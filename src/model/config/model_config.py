@@ -17,13 +17,13 @@ class TrainConfig(BaseModel):
 
 
 class LoraConfigSchema(BaseModel):
-    r: 16
-    alpha: 32
+    r: PositiveInt = 16
+    alpha: PositiveInt = 32
     dropout: float = Field(default=0.05, ge=0.0, le=1.0)
     target_modules: list[str]
 
 
 class ModelFitConfig(BaseModel):
     paths: PathsConfig
-    train: TrainConfig
+    training: TrainConfig
     lora: LoraConfigSchema
