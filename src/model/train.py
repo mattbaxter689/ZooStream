@@ -7,7 +7,7 @@ from transformers import EarlyStoppingCallback
 from model.config.loader import load_config
 from model.data import load_and_prepare_dataset
 from model.zoo_model import setup_model_and_tokenizer
-from model.callbacks import ModelCardCallback
+from model.callbacks import ModelCardCallback, CuratedMlflowCallback
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,17 @@ def train(
         target_modules=cfg.lora.target_modules,
     )
 
+    def to_prompt_completion(example):
+        return {
+            "prompt": [{"role": "user", "content": example["instruction"]}],
+            "completion": [{"role": "assistant", "content": example["output"]}],
+        }
+
+    split_dataset = split_dataset.map(
+        to_prompt_completion,
+        remove_columns=["instruction", "output"],
+    )
+
     training_args = SFTConfig(
         output_dir=cfg.paths.output_dir,
         eval_strategy="steps",
@@ -51,35 +62,31 @@ def train(
         weight_decay=cfg.training.weight_decay,
         logging_steps=5,
         fp16=True,
+        optim="paged_adamw_8bit",
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
         greater_is_better=False,
-        report_to="mlflow",
-        max_seq_length=cfg.training.max_seq_length,
+        report_to="none",
+        max_length=cfg.training.max_seq_length,
+        completion_only_loss=True,
+        eos_token="<|im_end|>",
+        disable_tqdm=True,
     )
 
     modelcard_callback = ModelCardCallback(cfg.paths.artifact_name)
 
-    def formatting_func(example):
-        texts = []
-        for instr, out in zip(example["instruction"], example["output"]):
-            messages = [
-                {"role": "user", "content": instr},
-                {"role": "assistant", "content": out},
-            ]
-            texts.append(tokenizer.apply_chat_template(messages, tokenize=False))
-        return texts
-
     trainer = SFTTrainer(
         model=model,
         processing_class=tokenizer,
-        formatting_func=formatting_func,
         args=training_args,
         train_dataset=split_dataset["train"],
         eval_dataset=split_dataset["test"],
         callbacks=[
             modelcard_callback,
-            EarlyStoppingCallback(early_stopping_patience=3),
+            CuratedMlflowCallback(),
+            EarlyStoppingCallback(early_stopping_patience=1),
         ],
     )
     modelcard_callback.trainer = trainer
@@ -87,6 +94,8 @@ def train(
     logger.info("Starting training from YAML config")
     trainer.train()
 
+    trainer.save_model(cfg.paths.output_dir)
+    tokenizer.save_pretrained(cfg.paths.output_dir)
     logger.info(f"Exported best model asset to {cfg.paths.output_dir}")
 
     return Path(cfg.paths.output_dir)
